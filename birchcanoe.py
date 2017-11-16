@@ -19,7 +19,7 @@ Next steps:
 * Arrange chapters more logically.
 '''
 
-import random, sys
+import random, string, sys
 import nltk.data
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktLanguageVars
 import sklearn.feature_extraction.text
@@ -27,12 +27,12 @@ import sklearn.feature_extraction.text
 #Contants and Setup
 max_word_count = 50000
 
-#nltk.download('punkt')
-#sent_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+nltk.download('punkt')
+sent_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+
+ends = [".", "!"]
 
 #Classes
-class ExtendPunktTokenizer(PunktLanguageVars):
-	sent_end_chars = ('.', '?', '!', '\n')
 
 #Methods
 def get_hsents():
@@ -44,80 +44,67 @@ def get_hsents():
 				cleanline = ((line.split("."))[1]).strip()
 				hsents.append(cleanline)
 	return hsents
+
+def write_chapter(sents):
+	'''Write a single chapter (a continuous string, with newlines).'''
+	
+	this_chap_len = random.randint(3000,5000)
+	
+	one_sent = ("%s%s ") % (random.choice(sents), random.choice(ends))
+	sample = one_sent.split()
+	chap_word_count = len(sample)
+	
+	need_content = True
+	chap = one_sent
+	
+	while need_content:
+		new_words = []
+		for _ in xrange(1,5):
+			new_words.append((random.choice(sample)).lower())
+		new_sent = " ".join(new_words)
+		new_sent = new_sent.translate(None, string.punctuation)
+		new_sent = new_sent[0].upper() + new_sent[1:].lower() + random.choice(ends)
+		chap = ("%s%s ") % (chap, new_sent)
+		chap_word_count = chap_word_count + len(new_words)
+		if random.randint(0,4) == 0:
+			chap = chap + "\n\n"
+		if chap_word_count > this_chap_len:
+			need_content = False
+	
+	return (chap, chap_word_count)
 	
 def assemble_story(sents):
 	'''Assemble the story.'''
 	
 	word_count = 0
-	need_content = True
-	
-	#ends = [".", "!"]
-	ends = ["."]
-	chapbreak = ("***")
-	
-	chap_word_count = 0
 	chap_count = 1
-	this_chap_len = random.randint(3000,5000)
 	
-	story = ("***")
-	
-	one_sent = random.choice(sents) + random.choice(ends)
-	story = ("%s%s ") % (story, one_sent)
-	
-	while need_content:
-		new_words = []
-		sample = one_sent.split()
-		for _ in xrange(1,3):
-			new_words.append((random.choice(sample)).lower())
-		story = ("%s%s ") % (story, " ".join(new_words))
+	need_chaps = True
+	story = ""
+
+	while need_chaps:
+		new_chap, new_chap_len = write_chapter(sents)
+		story = ("%s\n\n---%s---\n%s") % (story, str(chap_count), new_chap)
 		
-		word_count = word_count + len(new_words)
-		chap_word_count = chap_word_count + len(new_words)
+		word_count = word_count + new_chap_len
 		
-		if chap_word_count > this_chap_len:
-			
-			story = ("%s%s") % (story, chapbreak)
-			
-			one_sent = random.choice(sents) + random.choice(ends)
-			word_count = word_count + len(one_sent.split())
-			story = ("%s%s ") % (story, one_sent)
-			
-			chap_count = chap_count +1
-			chap_word_count = 0
-			this_chap_len = random.randint(3000,5000)
-			
-			new_words = []
-			
+		chap_count = chap_count + 1
+		
 		if word_count > max_word_count:
-			need_content = False
+			need_chaps = False
 			
 	return story
 	
-def clean_story(story):
-	'''Do final formatting adjustments.'''
-	sent_tokenizer = PunktSentenceTokenizer(lang_vars = ExtendPunktTokenizer())
-	all_chaps = story.split("***")
-	tok_story = []
-	
-	chap_num = 1
-	
-	for chap in all_chaps:
-		tok_chap = sent_tokenizer.tokenize(chap)
-		cleanchap = " ".join([sentence.capitalize() for sentence in tok_chap])
-		tok_story.append("--- %s ---" % chap_num)
-		chap_num = chap_num +1
-		tok_story.append(cleanchap)
-	
-	cleanstory = "\n\n".join(tok_story)
-	
-	return cleanstory
-
 #Main
 def main():
 	sents = get_hsents()
 	story = assemble_story(sents)
-	story = clean_story(story)
 	print(story)
+	
+	story_file_name = str(random.randint(0,(10**10))) + ".txt"
+	with open(story_file_name, 'w') as story_file:
+		story_file.write(story)
+	
 
 if __name__ == "__main__":
 	sys.exit(main())
